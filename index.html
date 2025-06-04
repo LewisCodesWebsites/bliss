@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Custom Search and Shortcuts Dashboard" />
+    <title>Custom Search + Shortcuts</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Bungee&family=Lexend:wght@100..900&display=swap');
+      --root {
+        --accent: rgba(255, 255, 255, 0.3);
+        --glass: rgba(30, 30, 30, 0.25);
+        --glass-darker: rgba(20, 20, 20, 0.4);
+        --transition-speed: 0.3s;
+        --border-radius-lg: 20px;
+        --border-radius-md: 12px;
+        --border-radius-sm: 6px;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      .clock-container {
+        text-align: center;
+        margin-bottom: 30px;
+        padding: 20px;
+        background: var(--glass-darker);
+        border-radius: var(--border-radius-lg);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        transition: all var(--transition-speed) ease;
+      }
+
+
+      .clock {
+        font-size: 4.5rem;
+        font-weight: 600;
+        color: white;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 2px;
+      }
+
+      .date {
+        font-size: 1.2rem;
+        color: rgba(255, 255, 255, 0.8);
+        margin-top: 5px;
+        text-transform: uppercase;
+        letter-spacing: 3px;
+      }
+
+      @media (max-width: 480px) {
+        .clock {
+          font-size: 3rem;
+        }
+        .date {
+          font-size: 1rem;
+        }
+      }
+
+      body {
+        font-family: "Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, sans-serif;
+        background: url("https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1470&q=80")
+          no-repeat center center/cover fixed;
+        color: #f2f2f2;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        min-height: 100vh;
+        padding: 60px 16px;
+        overflow-x: hidden;
+        position: relative;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.4);
+        z-index: 0;
+      }
+
+      .container {
+        background-color: var(--glass);
+        border-radius: 50px;
+        padding: 20px 30px;
+        width: 90%;
+        max-width: 500px;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        transition: all var(--transition-speed) ease;
+        position: relative;
+        z-index: 1;
+      }
+
+      .search-bar {
+        position: relative;
+        display: flex;
+        width: 100%;
+        gap: 4px;
+      }
+
+      .search-bar input {
+        flex: 1;
+        padding: 12px 18px;
+        border: 2px solid transparent;
+        border-radius: 50px;
+        background-color: rgba(255, 255, 255, 0.15);
+        color: #f8f8f8;
+        font-size: 16px;
+        outline: none;
+        transition: all var(--transition-speed) ease;
+      }
+
+      .search-bar input:focus {
+        border-color: var(--accent);
+        background-color: rgba(255, 255, 255, 0.2);
+      }
+
+      .search-bar input::placeholder {
+        color: rgba(255, 255, 255, 0.6);
+      }
+
+      .search-bar button {
+        padding: 12px 22px;
+        border: none;
+        border-radius: 50px;
+        background-color: var(--accent);
+        color: white;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all var(--transition-speed) ease;
+      }
+
+      .search-bar button:hover {
+        background-color: rgba(255, 255, 255, 0.4);
+        transform: translateY(-1px);
+      }
+
+      .search-bar button:active {
+        transform: translateY(1px);
+      }
+
+      .suggestions {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        right: 0;
+        max-height: min(
+          300px,
+          calc(100vh - 100% - 200px)
+        ); /* New height limit */
+        overflow-y: auto;
+        background: var(--glass-darker);
+        border-radius: 20px;
+        z-index: 999;
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        transform-origin: top;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        opacity: 0;
+        transform: translateY(-10px) scale(0.95);
+        pointer-events: none;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      .suggestions.active {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: all;
+      }
+
+      .suggestions div {
+        padding: 12px 16px;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        opacity: 0;
+        transform: translateX(-10px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .suggestions div:last-child {
+        border-bottom: none;
+      }
+
+      .suggestions.active div {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      .suggestions div:hover {
+        background: rgba(255, 255, 255, 0.1);
+        padding-left: 24px;
+      }
+
+      /* Stagger animation delays for suggestions */
+      .suggestions div:nth-child(1) {
+        transition-delay: 0.1s;
+      }
+      .suggestions div:nth-child(2) {
+        transition-delay: 0.15s;
+      }
+      .suggestions div:nth-child(3) {
+        transition-delay: 0.2s;
+      }
+      .suggestions div:nth-child(4) {
+        transition-delay: 0.25s;
+      }
+      .suggestions div:nth-child(5) {
+        transition-delay: 0.3s;
+      }
+
+      .shortcuts {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+        gap: 12px;
+        margin-top: 30px;
+        width: 100%;
+      }
+
+      .shortcut {
+        background-color: rgba(255, 255, 255, 0.2);
+        border-radius: var(--border-radius-md);
+        padding: 10px;
+        text-align: center;
+        cursor: grab;
+        transition: transform var(--transition-speed) ease,
+          background-color var(--transition-speed) ease;
+        position: relative;
+        min-height: 82px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .shortcut:hover {
+        transform: translateY(-2px);
+        background-color: rgba(255, 255, 255, 0.25);
+      }
+
+      .shortcut img {
+        width: 32px;
+        height: 32px;
+        border-radius: var(--border-radius-sm);
+        margin-bottom: 6px;
+        transition: transform var(--transition-speed) ease;
+      }
+
+      .shortcut:hover img {
+        transform: scale(1.1);
+      }
+
+      .shortcut span {
+        font-size: 12px;
+        color: white;
+        word-break: break-word;
+      }
+
+      .shortcut-actions {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        display: flex;
+        gap: 4px;
+        opacity: 0;
+        transition: opacity var(--transition-speed) ease;
+      }
+
+      .shortcut:hover .shortcut-actions {
+        opacity: 1;
+      }
+
+      .shortcut-actions button {
+        background: var(--glass-darker);
+        border: none;
+        color: white;
+        font-size: 10px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all var(--transition-speed) ease;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+
+      .shortcut-actions button:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      .add-shortcut-btn {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--glass-darker);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        font-size: 24px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        z-index: 100;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+
+      .add-shortcut-btn:hover {
+        transform: scale(1.1) rotate(180deg);
+        background-color: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.3);
+      }
+
+      .add-shortcut-btn:active {
+        transform: scale(0.95);
+      }
+
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .modal-overlay.visible {
+        opacity: 1;
+      }
+
+      .modal {
+        background: var(--glass-darker);
+        padding: 24px;
+        border-radius: var(--border-radius-lg);
+        width: 90%;
+        max-width: 300px;
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transform: translateY(20px) scale(0.95);
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      }
+
+      .modal.visible {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+      }
+
+      .modal h2 {
+        margin: 0 0 16px 0;
+        font-size: 1.5rem;
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .modal input {
+        width: 100%;
+        margin-bottom: 12px;
+        padding: 12px;
+        font-size: 14px;
+        border-radius: var(--border-radius-md);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        transition: all var(--transition-speed) ease;
+      }
+
+      .modal input:focus {
+        outline: none;
+        border-color: var(--accent);
+        background: rgba(255, 255, 255, 0.15);
+      }
+
+      .modal input::placeholder {
+        color: rgba(255, 255, 255, 0.5);
+      }
+
+      .modal .buttons {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 20px;
+      }
+
+      .modal .buttons button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: var(--border-radius-md);
+        font-size: 14px;
+        cursor: pointer;
+        transition: all var(--transition-speed) ease;
+        background: var(--accent);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .modal .buttons button:first-child {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .modal .buttons button:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-1px);
+      }
+
+      .modal .buttons button:active {
+        transform: translateY(1px);
+      }
+
+      footer {
+        margin-top: 200px;
+        padding: 20px;
+        color: rgba(255, 255, 255, 0.8);
+        text-align: center;
+        position: relative;
+        z-index: 1;
+      }
+
+      #footerQuote {
+        transition: opacity 0.5s ease;
+      }
+
+      @media (max-width: 480px) {
+        .container {
+          padding: 16px;
+        }
+        .shortcuts {
+          gap: 8px;
+        }
+        .add-shortcut-btn {
+          bottom: 1rem;
+          right: 1rem;
+        }
+      }
+
+      /* Custom scrollbar styling */
+      .suggestions::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .suggestions::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 3px;
+      }
+
+      .suggestions::-webkit-scrollbar-thumb {
+        background: var(--accent);
+        border-radius: 3px;
+      }
+
+      .suggestions::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.4);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container" role="main">
+      <div class="clock-container">
+        <div id="clock" class="clock"></div>
+        <div id="date" class="date"></div>
+      </div>
+
+      <form
+        class="search-bar"
+        action="https://www.google.com/search"
+        method="GET"
+        target="_blank"
+        role="search"
+      >
+        <input
+          type="text"
+          name="q"
+          id="search"
+          placeholder="Search something..."
+          autocomplete="off"
+          aria-label="Search query"
+          aria-expanded="false"
+          aria-controls="suggestions"
+        />
+        <button type="submit" aria-label="Perform search">Search</button>
+        <div
+          class="suggestions"
+          id="suggestions"
+          role="listbox"
+          aria-label="Search suggestions"
+        ></div>
+      </form>
+
+      <div
+        class="shortcuts"
+        id="shortcuts"
+        role="grid"
+        aria-label="Shortcut tiles"
+      ></div>
+    </div>
+
+    <button
+      class="add-shortcut-btn"
+      onclick="openModal()"
+      aria-label="Add new shortcut"
+    >
+      +
+    </button>
+
+    <footer>
+      &copy; 2025 LewisCodesWebsites —
+      <span id="footerQuote">Little by little, a little becomes a lot. – Tanzanian Proverb</span>
+    </footer>
+
+    <!-- Modal -->
+    <div
+      class="modal-overlay"
+      id="modalOverlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modalTitle"
+    >
+      <div class="modal">
+        <h2 id="modalTitle">Add Shortcut</h2>
+        <input
+          type="text"
+          id="shortcutName"
+          placeholder="Name"
+          aria-label="Shortcut name"
+          maxlength="50"
+        />
+        <input
+          type="url"
+          id="shortcutURL"
+          placeholder="https://example.com"
+          aria-label="Shortcut URL"
+          pattern="https?://.*"
+        />
+        <div class="buttons">
+          <button type="button" onclick="closeModal()">Cancel</button>
+          <button type="button" onclick="saveShortcut()">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function updateClock() {
+        const now = new Date();
+        const clock = document.getElementById("clock");
+        const dateDisplay = document.getElementById("date");
+
+        // Time formatting
+        const hours = String(now.getHours()).padStart(2, "0");
+        const minutes = String(now.getMinutes()).padStart(2, "0");
+        const seconds = String(now.getSeconds()).padStart(2, "0");
+
+        // Date formatting
+        const options = { weekday: "long", month: "long", day: "numeric" };
+        const dateString = now.toLocaleDateString("en-UK", options);
+
+        // Update DOM
+        clock.textContent = `${hours}:${minutes}:${seconds}`;
+        dateDisplay.textContent = dateString;
+      }
+
+      // Initialize clock
+      updateClock();
+      setInterval(updateClock, 1000);
+      // DOM Elements
+      const modalOverlay = document.getElementById("modalOverlay");
+      const modal = modalOverlay.querySelector(".modal");
+      const nameInput = document.getElementById("shortcutName");
+      const urlInput = document.getElementById("shortcutURL");
+      const shortcutsContainer = document.getElementById("shortcuts");
+      const suggestionsBox = document.getElementById("suggestions");
+      const searchInput = document.getElementById("search");
+      const footerQuoteElement = document.getElementById("footerQuote");
+
+      // Footer quotes rotation
+      const footerQuotes = [
+        "Believe you can and you're halfway there. – Theodore Roosevelt",
+        "Do one thing every day that scares you. – Eleanor Roosevelt",
+        "Dream big. Start small. Act now. – Robin Sharma",
+        "Success is not final, failure is not fatal: It is the courage to continue that counts. – Winston Churchill",
+        "You are stronger than you think.",
+        "Every day is a second chance.",
+        "The best way to get started is to quit talking and begin doing. – Walt Disney",
+        "Great things never come from comfort zones.",
+        "Doubt kills more dreams than failure ever will.",
+        "Don't watch the clock; do what it does. Keep going. – Sam Levenson",
+        "Start where you are. Use what you have. Do what you can. – Arthur Ashe",
+        "Push yourself, because no one else is going to do it for you.",
+        "It always seems impossible until it’s done. – Nelson Mandela",
+        "Little by little, a little becomes a lot. – Tanzanian Proverb",
+        "You don’t have to be perfect to be amazing.",
+      ];
+
+      let currentQuoteIndex = 0;
+
+      function rotateFooterQuote() {
+        currentQuoteIndex = (currentQuoteIndex + 1) % footerQuotes.length;
+        footerQuoteElement.style.opacity = "0";
+
+        setTimeout(() => {
+          footerQuoteElement.textContent = footerQuotes[currentQuoteIndex];
+          footerQuoteElement.style.opacity = "1";
+        }, 500);
+      }
+
+      setInterval(rotateFooterQuote, 10000);
+
+      // Shortcuts functionality
+      let editingIndex = null;
+      let shortcuts = [];
+
+      try {
+        shortcuts = JSON.parse(localStorage.getItem("shortcuts") || "[]");
+      } catch (error) {
+        console.error("Error loading shortcuts:", error);
+        shortcuts = [];
+      }
+
+      function saveToStorage() {
+        try {
+          localStorage.setItem("shortcuts", JSON.stringify(shortcuts));
+        } catch (error) {
+          console.error("Error saving shortcuts:", error);
+          alert("Failed to save shortcuts. Local storage might be full.");
+        }
+      }
+
+      function getFavicon(url) {
+        try {
+          const urlObj = new URL(url);
+          return `https://www.google.com/s2/favicons?sz=64&domain_url=${encodeURIComponent(
+            urlObj.origin
+          )}`;
+        } catch {
+          return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M12 2L1 21h22L12 2zm0 4l7.53 13H4.47L12 6z"/></svg>';
+        }
+      }
+
+      function renderShortcuts() {
+        shortcutsContainer.innerHTML = "";
+
+        shortcuts.forEach((sc, i) => {
+          const div = document.createElement("div");
+          div.className = "shortcut";
+          div.draggable = true;
+          div.dataset.index = i;
+          div.setAttribute("role", "gridcell");
+          div.setAttribute("tabindex", "0");
+
+          div.innerHTML = `
+                    <img src="${getFavicon(
+                      sc.url
+                    )}" alt="" aria-hidden="true" />
+                    <span>${sc.name}</span>
+                    <div class="shortcut-actions">
+                        <button onclick="editShortcut(${i})" aria-label="Edit ${
+            sc.name
+          }">Edit</button>
+                        <button onclick="deleteShortcut(${i})" aria-label="Delete ${
+            sc.name
+          }">×</button>
+                    </div>
+                `;
+
+          div.onclick = (e) => {
+            if (!e.target.closest("button")) {
+              window.open(sc.url, "_blank", "noopener noreferrer");
+            }
+          };
+
+          div.ondragstart = (e) => {
+            e.dataTransfer.setData("text/plain", i.toString());
+            div.classList.add("dragging");
+          };
+
+          div.ondragend = () => div.classList.remove("dragging");
+          div.ondragover = (e) => e.preventDefault();
+
+          div.ondrop = (e) => {
+            e.preventDefault();
+            const fromIndex = parseInt(e.dataTransfer.getData("text/plain"));
+            const toIndex = parseInt(div.dataset.index);
+
+            if (fromIndex !== toIndex) {
+              const [moved] = shortcuts.splice(fromIndex, 1);
+              shortcuts.splice(toIndex, 0, moved);
+              saveToStorage();
+              renderShortcuts();
+            }
+          };
+
+          shortcutsContainer.appendChild(div);
+        });
+      }
+
+      function validateURL(url) {
+        try {
+          new URL(url);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
+      function openModal(index = null) {
+        editingIndex = index;
+        document.getElementById("modalTitle").textContent =
+          index !== null ? "Edit Shortcut" : "Add Shortcut";
+
+        if (index !== null) {
+          nameInput.value = shortcuts[index].name;
+          urlInput.value = shortcuts[index].url;
+        } else {
+          nameInput.value = "";
+          urlInput.value = "";
+        }
+
+        modalOverlay.style.display = "flex";
+        setTimeout(() => {
+          modalOverlay.classList.add("visible");
+          modal.classList.add("visible");
+        }, 10);
+        nameInput.focus();
+      }
+
+      function closeModal() {
+        modalOverlay.classList.remove("visible");
+        modal.classList.remove("visible");
+        setTimeout(() => {
+          modalOverlay.style.display = "none";
+        }, 300);
+        editingIndex = null;
+      }
+
+      function saveShortcut() {
+        const name = nameInput.value.trim();
+        const url = urlInput.value.trim();
+
+        if (!name) {
+          alert("Please enter a name for the shortcut.");
+          nameInput.focus();
+          return;
+        }
+
+        if (!url) {
+          alert("Please enter a URL for the shortcut.");
+          urlInput.focus();
+          return;
+        }
+
+        if (!validateURL(url)) {
+          alert("Please enter a valid URL (including http:// or https://)");
+          urlInput.focus();
+          return;
+        }
+
+        const finalUrl = url.startsWith("http") ? url : `https://${url}`;
+
+        if (editingIndex !== null) {
+          shortcuts[editingIndex] = { name, url: finalUrl };
+        } else {
+          shortcuts.push({ name, url: finalUrl });
+        }
+
+        saveToStorage();
+        closeModal();
+        renderShortcuts();
+      }
+
+      function editShortcut(index) {
+        openModal(index);
+      }
+
+      function deleteShortcut(index) {
+        const shortcut = shortcuts[index];
+        if (confirm(`Delete the "${shortcut.name}" shortcut?`)) {
+          shortcuts.splice(index, 1);
+          saveToStorage();
+          renderShortcuts();
+        }
+      }
+
+      // Search suggestions
+      let suggestionTimeout = null;
+
+      searchInput.addEventListener("input", () => {
+        clearTimeout(suggestionTimeout);
+
+        const query = searchInput.value.trim();
+
+        if (!query) {
+          suggestionsBox.classList.remove("active");
+          setTimeout(() => {
+            suggestionsBox.innerHTML = "";
+          }, 300);
+          return;
+        }
+
+        suggestionTimeout = setTimeout(() => {
+          // Basic suggestions
+          const suggestions = [
+            query,
+            `${query} tutorial`,
+            `${query} examples`,
+            `how to ${query}`,
+            `best ${query}`,
+          ];
+
+          suggestionsBox.innerHTML = "";
+
+          suggestions.forEach((suggestion) => {
+            const div = document.createElement("div");
+            div.textContent = suggestion;
+            div.setAttribute("role", "option");
+            div.setAttribute("tabindex", "0");
+
+            div.onclick = () => {
+              searchInput.value = suggestion;
+              suggestionsBox.classList.remove("active");
+              setTimeout(() => {
+                searchInput.form.submit();
+              }, 150);
+            };
+
+            div.onkeydown = (e) => {
+              if (e.key === "Enter") {
+                searchInput.value = suggestion;
+                suggestionsBox.classList.remove("active");
+                searchInput.form.submit();
+              }
+            };
+
+            suggestionsBox.appendChild(div);
+          });
+
+          requestAnimationFrame(() => {
+            suggestionsBox.classList.add("active");
+          });
+        }, 150);
+      });
+
+      // Close suggestions on click outside
+      document.addEventListener("click", (e) => {
+        if (!e.target.closest(".search-bar")) {
+          suggestionsBox.classList.remove("active");
+        }
+      });
+
+      // Event Listeners
+      modalOverlay.onclick = (e) => {
+        if (e.target === modalOverlay) closeModal();
+      };
+
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeModal();
+      });
+
+      // Initialize
+      renderShortcuts();
+    </script>
+  </body>
+</html>
